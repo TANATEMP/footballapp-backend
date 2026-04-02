@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  PLAYER
+  VIEWER
+}
+
+enum TeamStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model User {
+  id           String         @id @default(uuid()) @db.Uuid
+  name         String         @db.VarChar(100)
+  email        String         @unique @db.VarChar(255)
+  passwordHash String?        @db.Text
+  role         UserRole       @default(VIEWER)
+  isActive     Boolean        @default(true)
+  resetToken   String?        @db.Text
+  resetTokenExpires DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  oauthAccounts OauthAccount[]
+  team          Team?          @relation("ManagerTeam")
+  leagues       League[]
+  joinRequests  JoinRequest[]
+  playerProfile Player?
+}
+
+model OauthAccount {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @db.Uuid
+  provider          String   @db.VarChar(50)
+  providerAccountId String   @db.VarChar(255)
+  accessToken       String?  @db.Text
+  refreshToken      String?  @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+enum LeagueStatus {
+  REGISTRATION
+  PRE_SEASON
+  ONGOING
+  COMPLETED
+}
+
+model League {
+  id          String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(200)
+  season       String   @db.VarChar(20)
+  description  String?  @db.Text
+  createdBy    String   @db.Uuid
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  status      LeagueStatus @default(REGISTRATION)
+  maxTeams    Int          @default(20)
+  minPlayers  Int          @default(11)
+  maxPlayers  Int          @default(25)
+  registrationStart DateTime @default(now()) @db.Timestamp()
+  registrationEnd   DateTime @default(now()) @db.Timestamp()
+  
+  // Scheduling Defaults
+  daysOfWeek        Int[]    @default([6, 0])
+  startTime         String   @default("18:00") @db.VarChar(10)
+  endTime           String   @default("22:00") @db.VarChar(10)
+  matchDuration     Int      @default(120)
+  matchFormat       String   @default("SINGLE") @db.VarChar(20)
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  creator     User     @relation(fields: [createdBy], references: [id])
+  teams       Team[]
+  matches     Match[]
+  standings   LeagueStanding[]
+  playerStats PlayerStat[]
+}
+
+model Team {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(100)
+  shortName   String   @default("") @db.VarChar(10)
+  logoUrl     String?  @db.VarChar(255)
+  leagueId    String?  @db.Uuid
+  managerId   String     @unique @db.Uuid
+  status      TeamStatus @default(PENDING)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  league      League?  @relation(fields: [leagueId], references: [id])
+  manager     User     @relation("ManagerTeam", fields: [managerId], references: [id])
+  players     Player[]
+  homeMatches Match[]  @relation("HomeTeam")
+  awayMatches Match[]  @relation("AwayTeam")
+  events      MatchEvent[]
+  standings   LeagueStanding[]
+  joinRequests JoinRequest[]
+}
+
+enum PlayerPosition {
+  GK
+  DEF
+  MID
+  FWD
+}
+
+model Player {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(100)
+  number    Int?
+  position  PlayerPosition
+  teamId    String?  @db.Uuid
+  userId    String?  @unique @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team      Team?    @relation(fields: [teamId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+  stats     PlayerStat[]
+  events    MatchEvent[]
+}
+
+model JoinRequest {
+  id        String            @id @default(uuid()) @db.Uuid
+  userId    String            @db.Uuid
+  teamId    String            @db.Uuid
+  status    JoinRequestStatus @default(PENDING)
+  message   String?           @db.Text
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  user      User              @relation(fields: [userId], references: [id])
+  team      Team              @relation(fields: [teamId], references: [id])
+
+  @@unique([userId, teamId, status])
+}
+
+enum MatchStatus {
+  DRAFT
+  SCHEDULED
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Match {
+  id          String   @id @default(uuid()) @db.Uuid
+  leagueId    String   @db.Uuid
+  homeTeamId  String   @db.Uuid
+  awayTeamId  String   @db.Uuid
+  matchDate   DateTime
+  homeScore   Int      @default(0)
+  awayScore   Int      @default(0)
+  status      MatchStatus @default(SCHEDULED)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  league      League   @relation(fields: [leagueId], references: [id])
+  homeTeam    Team     @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam    Team     @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  events      MatchEvent[]
+}
+
+enum EventType {
+  GOAL
+  ASSIST
+  YELLOW_CARD
+  RED_CARD
+  OWN_GOAL
+}
+
+model MatchEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  matchId    String   @db.Uuid
+  teamId     String   @db.Uuid
+  playerId   String?  @db.Uuid
+  eventType  EventType
+  minute     Int
+  commentary String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team       Team     @relation(fields: [teamId], references: [id])
+  player     Player?  @relation(fields: [playerId], references: [id])
+}
+
+model PlayerStat {
+  id            String   @id @default(uuid()) @db.Uuid
+  playerId      String   @db.Uuid
+  leagueId      String   @db.Uuid
+  goals         Int      @default(0)
+  assists       Int      @default(0)
+  yellowCards   Int      @default(0)
+  redCards      Int      @default(0)
+  matchesPlayed Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  player        Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  league        League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+}
+
+model LeagueStanding {
+  id             String   @id @default(uuid()) @db.Uuid
+  leagueId       String   @db.Uuid
+  teamId         String   @db.Uuid
+  played         Int      @default(0)
+  won            Int      @default(0)
+  drawn          Int      @default(0)
+  lost           Int      @default(0)
+  goalsFor       Int      @default(0)
+  goalsAgainst   Int      @default(0)
+  goalDifference Int      @default(0)
+  points         Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  league         League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  team           Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
