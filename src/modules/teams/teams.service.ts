@@ -9,13 +9,7 @@ import { UpdateTeamDto } from './dto/update-team.dto';
 
 @Injectable()
 export class TeamsService {
-<<<<<<< HEAD
   constructor(private prisma: PrismaService) {}
-=======
-  constructor(
-    @InjectModel(Team) private readonly teamModel: typeof Team,
-  ) {}
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
 
   async create(dto: CreateTeamDto | any, userId?: string) {
     return this.prisma.team.create({
@@ -123,11 +117,19 @@ export class TeamsService {
     });
   }
 
-  async joinLeague(teamId: string, leagueId: string, user: any) {
+async joinLeague(teamId: string, leagueId: string, user: any) {
     const team = await this.checkOwnership(teamId, user);
     
-    if (team.leagueId === leagueId) {
+    // 🛡️ Rule 0.1: ป้องกันการสมัครซ้ำลีกเดิม "ยกเว้น" ว่าจะเคยโดน Reject มาก่อน (ให้โอกาสแก้ตัว)
+    if (team.leagueId === leagueId && team.status !== TeamStatus.REJECTED) {
       throw new BadRequestException('Team is already in this league.');
+    }
+
+    // 🛡️ Rule 0.2: ถ้ามีลีกอื่นอยู่แล้ว จะไปสมัครลีกใหม่ได้ ก็ต่อเมื่อ โดน Reject มา หรือ ลีกเก่าเตะจบ (COMPLETED) ไปแล้วเท่านั้น
+    if (team.leagueId && team.leagueId !== leagueId) {
+      if (team.status !== TeamStatus.REJECTED && team.league?.status !== LeagueStatus.COMPLETED) {
+        throw new BadRequestException('Cannot join a new league while currently registered or competing in another active league.');
+      }
     }
 
     const league = await this.prisma.league.findUnique({
@@ -135,11 +137,6 @@ export class TeamsService {
     });
 
     if (!league) throw new NotFoundException('League not found');
-
-    // Rule 0: Cannot join a new league if currently in an ONGOING one
-    if (team.league && team.league.status === LeagueStatus.ONGOING) {
-      throw new BadRequestException('Cannot join a new league while currently competing in an active season.');
-    }
 
     // Rule 1: Status must be REGISTRATION
     if (league.status !== LeagueStatus.REGISTRATION) {

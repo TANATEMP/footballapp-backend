@@ -1,19 +1,13 @@
 // src/modules/auth/dto/register.dto.ts
 <<<<<<< HEAD
-<<<<<<< HEAD
 import { IsEmail, IsString, IsOptional, IsIn, MinLength, MaxLength, Matches } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 =======
-=======
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
 import { IsEmail, IsString, MinLength, MaxLength, Matches, IsIn } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from '../../../database/models/user.model';
-<<<<<<< HEAD
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
-=======
 >>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
 
 export class RegisterDto {
@@ -49,22 +43,16 @@ export class RegisterDto {
   password: string;
 
 <<<<<<< HEAD
-<<<<<<< HEAD
   @ApiPropertyOptional({ example: 'player', enum: ['player', 'manager'], description: 'Only player or manager allowed' })
   @IsOptional()
   @IsIn(['player', 'manager'], { message: 'Role must be either player or manager' })
   @Transform(({ value }: { value: any }) => value?.toLowerCase().trim())
   role?: string;
 =======
-=======
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
   @ApiProperty({ enum: [UserRole.MANAGER, UserRole.PLAYER], example: UserRole.PLAYER })
   @IsIn([UserRole.MANAGER, UserRole.PLAYER], {
     message: 'Role must be manager or player',
   })
   role: UserRole;
-<<<<<<< HEAD
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
-=======
 >>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
 }

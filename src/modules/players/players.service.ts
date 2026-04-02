@@ -9,13 +9,7 @@ import { UpdatePlayerDto } from './dto/update-player.dto';
 
 @Injectable()
 export class PlayersService {
-<<<<<<< HEAD
   constructor(private prisma: PrismaService) {}
-=======
-  constructor(
-    @InjectModel(Player) private readonly playerModel: typeof Player,
-  ) {}
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
 
   async validateJerseyNumber(teamId: string, number: number, excludePlayerId?: string) {
     if (!teamId || !number) return;

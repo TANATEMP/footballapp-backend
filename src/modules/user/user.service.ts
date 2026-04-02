@@ -5,13 +5,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
-<<<<<<< HEAD
   constructor(private prisma: PrismaService) {}
-=======
-  constructor(
-    @InjectModel(User) private readonly userModel: typeof User,
-  ) {}
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
 
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({

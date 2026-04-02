@@ -11,15 +11,7 @@ import { buildPaginatedResponse } from '../../common/utils/pagination.util';
 
 @Injectable()
 export class LeaguesService {
-<<<<<<< HEAD
   constructor(private prisma: PrismaService) {}
-=======
-  constructor(
-    @InjectModel(League) private readonly leagueModel: typeof League,
-    @InjectModel(LeagueStanding) private readonly standingModel: typeof LeagueStanding,
-    @InjectModel(PlayerStat) private readonly playerStatModel: typeof PlayerStat,
-  ) {}
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
 
   async create(dto: CreateLeagueDto, userId: string) {
     const today = new Date();
