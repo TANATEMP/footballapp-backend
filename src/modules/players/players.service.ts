@@ -1,4 +1,3 @@
-// src/modules/players/players.service.ts
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { UserRole } from '@prisma/client';
@@ -28,7 +27,7 @@ export class PlayersService {
   }
 
   async create(dto: CreatePlayerDto | any, userId?: string) {
-    const teamId = dto.teamId || dto.team_id;
+    const teamId = dto.teamId
 
     if (teamId) {
       const team = await this.prisma.team.findUnique({
@@ -137,13 +136,12 @@ export class PlayersService {
       await this.findOne(id);
     }
     const data: any = { ...dto };
-    if (data.team_id) data.teamId = data.team_id;
-    delete data.team_id;
+    if (data.teamId) data.teamId = data.teamId;
+    delete data.teamId;
 
     if (data.number && data.teamId) {
       await this.validateJerseyNumber(data.teamId, data.number, id);
     } else if (data.number) {
-      // If teamId not in DTO, get it from the player
       const player = await this.findOne(id);
       if (player.teamId) {
         await this.validateJerseyNumber(player.teamId, data.number, id);

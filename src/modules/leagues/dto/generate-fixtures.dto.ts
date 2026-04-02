@@ -34,6 +34,6 @@ export class GenerateFixturesDto {
 
   @ApiPropertyOptional({ example: true, description: 'Allow parallel matches if window is exceeded' })
   @IsOptional()
-  @IsString() // class-transformer might handle boolean, but lets stick to standard validation or just use IsOptional.
+  @IsString()
   allowOverlap?: any;
 }

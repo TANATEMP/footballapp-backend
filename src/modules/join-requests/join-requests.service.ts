@@ -106,8 +106,6 @@ export class JoinRequestsService {
         await this.playersService.validateJerseyNumber(request.teamId, number);
       }
 
-      // 🧹 Delete previous history for this user in this team to satisfy the Unique Constraint
-      // This allows players to rejoin a team they were previously in.
       await tx.joinRequest.deleteMany({
         where: {
           userId: request.userId,

@@ -21,11 +21,11 @@ export class CreateLeagueDto {
 
   @ApiProperty({ example: '2025-01-01' })
   @IsDateString()
-  start_date: string;
+  startDate: string;
 
   @ApiProperty({ example: '2025-12-31' })
   @IsDateString()
-  end_date: string;
+  endDate: string;
 
   @ApiProperty({ enum: LeagueStatus, default: LeagueStatus.REGISTRATION })
   @IsEnum(LeagueStatus)
@@ -55,8 +55,6 @@ export class CreateLeagueDto {
   @IsDateString()
   @IsOptional()
   registrationEnd?: string;
-
-  // --- Scheduling Defaults ---
 
   @ApiPropertyOptional({ example: [6, 0] })
   @IsOptional()

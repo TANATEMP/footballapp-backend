@@ -1,4 +1,3 @@
-// src/modules/players/dto/create-player.dto.ts
 import { IsString, IsNumber, IsEnum, IsUUID, IsOptional, MaxLength, MinLength, Max, Min, IsObject } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
@@ -26,7 +25,7 @@ export class CreatePlayerDto {
   @ApiPropertyOptional({ example: '323e4567-e89b-12d3-a456-426614174002', description: 'Team UUID' })
   @IsOptional()
   @IsUUID()
-  team_id?: string;
+  teamId?: string;
 
   @ApiPropertyOptional({ example: { nationality: 'Thai', birth_date: '2000-01-01' } })
   @IsOptional()

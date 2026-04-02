@@ -1,4 +1,3 @@
-// src/modules/teams/teams.service.ts
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { UserRole, LeagueStatus, TeamStatus } from '@prisma/client';
@@ -16,9 +15,9 @@ export class TeamsService {
       data: {
         name: dto.name,
         shortName: dto.shortName,
-        leagueId: dto.leagueId || dto.league_id || null,
-        managerId: dto.managerId || dto.manager_id || userId,
-        logoUrl: dto.logoUrl || dto.logo_url || null,
+        leagueId: dto.leagueId || null,
+        managerId: dto.managerId || userId,
+        logoUrl: dto.logoUrl || null,
       },
       include: { league: true },
     });
@@ -60,7 +59,6 @@ export class TeamsService {
   }
 
   async uploadLogo(teamId: string, logoBuffer: Buffer, filename: string) {
-    // This is a stub for Cloudinary/S3 integration
     const logoUrl = `https://storage.provider.com/logos/${filename}`;
     await this.findOne(teamId);
     await this.prisma.team.update({
@@ -73,12 +71,12 @@ export class TeamsService {
   async update(id: string, dto: UpdateTeamDto | any) {
     await this.findOne(id);
     const data: any = { ...dto };
-    if (data.league_id) data.leagueId = data.league_id;
-    if (data.manager_id) data.managerId = data.manager_id;
-    if (data.logo_url) data.logoUrl = data.logo_url;
-    delete data.league_id;
-    delete data.manager_id;
-    delete data.logo_url;
+    if (data.leagueId) data.leagueId = data.leagueId;
+    if (data.managerId) data.managerId = data.managerId;
+    if (data.logoUrl) data.logoUrl = data.logoUrl;
+    delete data.leagueId;
+    delete data.managerId;
+    delete data.logoUrl;
 
     return this.prisma.team.update({
       where: { id },
@@ -95,7 +93,6 @@ export class TeamsService {
   async updateStatus(id: string, status: string) {
     const team = await this.findOne(id);
     
-    // If approving, check league capacity
     if (status === 'APPROVED' && team.leagueId) {
       const league = await this.prisma.league.findUnique({
         where: { id: team.leagueId },
@@ -120,12 +117,9 @@ export class TeamsService {
 async joinLeague(teamId: string, leagueId: string, user: any) {
     const team = await this.checkOwnership(teamId, user);
     
-    // 🛡️ Rule 0.1: ป้องกันการสมัครซ้ำลีกเดิม "ยกเว้น" ว่าจะเคยโดน Reject มาก่อน (ให้โอกาสแก้ตัว)
     if (team.leagueId === leagueId && team.status !== TeamStatus.REJECTED) {
       throw new BadRequestException('Team is already in this league.');
     }
-
-    // 🛡️ Rule 0.2: ถ้ามีลีกอื่นอยู่แล้ว จะไปสมัครลีกใหม่ได้ ก็ต่อเมื่อ โดน Reject มา หรือ ลีกเก่าเตะจบ (COMPLETED) ไปแล้วเท่านั้น
     if (team.leagueId && team.leagueId !== leagueId) {
       if (team.status !== TeamStatus.REJECTED && team.league?.status !== LeagueStatus.COMPLETED) {
         throw new BadRequestException('Cannot join a new league while currently registered or competing in another active league.');
@@ -138,27 +132,22 @@ async joinLeague(teamId: string, leagueId: string, user: any) {
 
     if (!league) throw new NotFoundException('League not found');
 
-    // Rule 1: Status must be REGISTRATION
     if (league.status !== LeagueStatus.REGISTRATION) {
       throw new BadRequestException('League is not accepting new registrations currently.');
     }
-
-    // Rule 2: Time-based Window
     const now = new Date();
     if (now < league.registrationStart || now > league.registrationEnd) {
       throw new BadRequestException('Team registration window is closed for this league.');
     }
 
-    // Rule 3: minPlayers check
     if (team.players.length < league.minPlayers) {
       const shortage = league.minPlayers - team.players.length;
       throw new BadRequestException(`Cannot join: You need at least ${shortage} more players to meet the league's minimum requirement of ${league.minPlayers} players.`);
     }
 
-    // All clear - join
     return this.prisma.team.update({
       where: { id: teamId },
-      data: { leagueId, status: TeamStatus.PENDING }, // reset team status to pending for admin to approve
+      data: { leagueId, status: TeamStatus.PENDING },
     });
   }
 
@@ -168,7 +157,6 @@ async joinLeague(teamId: string, leagueId: string, user: any) {
       throw new BadRequestException('Team is not in any league.');
     }
 
-    // Prevent removal if season is ONGOING
     if (team.league && team.league.status === LeagueStatus.ONGOING) {
       throw new BadRequestException('Cannot remove team from an ongoing league.');
     }

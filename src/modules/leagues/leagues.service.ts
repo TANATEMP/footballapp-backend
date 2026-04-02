@@ -1,4 +1,3 @@
-// src/modules/leagues/leagues.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { LeagueStatus, MatchStatus, TeamStatus } from '@prisma/client';
@@ -17,9 +16,9 @@ export class LeaguesService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const start = new Date(dto.start_date);
-    const end = new Date(dto.end_date);
-    const regEnd = dto.registrationEnd ? new Date(dto.registrationEnd) : new Date(dto.start_date);
+    const start = new Date(dto.startDate);
+    const end = new Date(dto.endDate);
+    const regEnd = dto.registrationEnd ? new Date(dto.registrationEnd) : new Date(dto.startDate);
 
     if (start < today) {
       throw new Error('Tournament start date cannot be in the past.');
@@ -36,14 +35,14 @@ export class LeaguesService {
         name: dto.name,
         season: dto.season,
         description: dto.description,
-        startDate: new Date(dto.start_date),
-        endDate: new Date(dto.end_date),
+        startDate: new Date(dto.startDate),
+        endDate: new Date(dto.endDate),
         status: dto.status,
         maxTeams: dto.maxTeams ?? 20,
         minPlayers: dto.minPlayers ?? 11,
         maxPlayers: dto.maxPlayers ?? 25,
         registrationStart: dto.registrationStart ? new Date(dto.registrationStart) : new Date(),
-        registrationEnd: dto.registrationEnd ? new Date(dto.registrationEnd) : new Date(dto.start_date),
+        registrationEnd: dto.registrationEnd ? new Date(dto.registrationEnd) : new Date(dto.startDate),
         daysOfWeek: dto.daysOfWeek ?? [6, 0],
         startTime: dto.startTime ?? '18:00',
         endTime: dto.endTime ?? '22:00',
@@ -131,7 +130,7 @@ export class LeaguesService {
   }
 
   async update(id: string, dto: UpdateLeagueDto) {
-    await this.findOne(id); // verify existence
+    await this.findOne(id);
     return this.prisma.league.update({
       where: { id },
       data: dto as any,

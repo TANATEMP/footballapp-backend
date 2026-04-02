@@ -1,16 +1,11 @@
-// src/modules/auth/auth.service.ts
 import { Injectable, UnauthorizedException, ConflictException, ForbiddenException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
-<<<<<<< HEAD
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { User, UserRole } from '@prisma/client';
-=======
-import { User, UserRole } from '../../database/models/user.model';
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
 import { hashPassword, verifyPassword, generateSecureToken } from '../../common/utils/crypto.util';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -18,18 +13,11 @@ import { LoginDto } from './dto/login.dto';
 @Injectable()
 export class AuthService {
   constructor(
-<<<<<<< HEAD
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
     private mailService: MailService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-=======
-    @InjectModel(User) private readonly userModel: typeof User,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
   ) {}
 
   async forgotPassword(email: string) {
@@ -87,7 +75,6 @@ export class AuthService {
       throw new ConflictException('Registration failed. Please try again.');
     }
 
-<<<<<<< HEAD
     const roleMap: Record<string, UserRole> = {
       player: UserRole.PLAYER,
       manager: UserRole.MANAGER,
@@ -102,18 +89,6 @@ export class AuthService {
         passwordHash,
         role: assignedRole,
       },
-=======
-    const password_hash = await hashPassword(dto.password);
-    const role = [UserRole.MANAGER, UserRole.PLAYER].includes(dto.role)
-      ? dto.role
-      : UserRole.PLAYER;
-
-    const user = await this.userModel.create({
-      name: dto.name,
-      email: dto.email,
-      password_hash,
-      role,
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
     });
 
     return this.generateTokenPair(user);
@@ -167,8 +142,39 @@ export class AuthService {
     }
   }
 
+  // เอา Token จาก React ไปเช็คกับ Google
+  async verifyGoogleAccessToken(accessToken: string, requestedRole: string = 'player') {
+    try {
+      const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      
+      if (!response.ok) {
+        throw new UnauthorizedException('Invalid Google Token');
+      }
+
+      const profile = await response.json();
+
+      const roleMap: Record<string, UserRole> = {
+        player: UserRole.PLAYER,
+        manager: UserRole.MANAGER,
+      };
+      const assignedRole = roleMap[requestedRole?.toLowerCase()] || UserRole.PLAYER;
+
+      return this.validateOAuthUser({
+        email: profile.email,
+        firstName: profile.given_name || '',
+        lastName: profile.family_name || '',
+        providerId: profile.sub,
+        role: assignedRole,
+      });
+    } catch (error) {
+      throw new UnauthorizedException('Google authentication failed');
+    }
+  }
+
   async validateOAuthUser(profile: any) {
-    const { email, firstName, lastName, providerId } = profile;
+    const { email, firstName, lastName, providerId, role } = profile;
     
     // 1. Check if OAuth account already exists
     const oauthAccount = await this.prisma.oauthAccount.findUnique({
@@ -197,7 +203,7 @@ export class AuthService {
         data: {
           email,
           name: `${firstName} ${lastName}`.trim(),
-          role: UserRole.PLAYER, // Default role for new signups
+          role: role || UserRole.PLAYER,
           isActive: true,
         },
       });

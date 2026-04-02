@@ -1,4 +1,3 @@
-// src/app.module.ts
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaModule } from './database/prisma/prisma.module';
@@ -16,7 +15,6 @@ import { RolesGuard } from './common/guards/roles.guard';
 
 
 
-// Modules (Minimal stubs to fix imports)
 import { AuthModule } from './modules/auth/auth.module';
 import { LeaguesModule } from './modules/leagues/leagues.module';
 import { TeamsModule } from './modules/teams/teams.module';

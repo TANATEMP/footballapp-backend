@@ -1,4 +1,3 @@
-// src/modules/matches/matches.service.ts
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { MessageEvent } from '@nestjs/common';
@@ -15,28 +14,20 @@ import { buildPaginatedResponse } from '../../common/utils/pagination.util';
 @Injectable()
 export class MatchesService {
   constructor(
-<<<<<<< HEAD
     private prisma: PrismaService,
-=======
-    @InjectModel(Match) private readonly matchModel: typeof Match,
-    @InjectModel(MatchEvent) private readonly eventModel: typeof MatchEvent,
-    @InjectModel(PlayerStat) private readonly playerStatModel: typeof PlayerStat,
-    @InjectModel(LeagueStanding) private readonly standingModel: typeof LeagueStanding,
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
     @Inject('REDIS_CLIENT') private readonly redis: Redis,
   ) {}
 
-  async create(dto: CreateMatchDto | any) {
-    const { scheduledAt, scheduled_at, ...data } = dto;
-    const matchDate = new Date(scheduledAt || scheduled_at);
-
+  async create(dto: CreateMatchDto) {
     return this.prisma.match.create({
       data: {
-        leagueId: data.leagueId || data.league_id,
-        homeTeamId: data.homeTeamId || data.home_team_id,
-        awayTeamId: data.awayTeamId || data.away_team_id,
-        matchDate,
-        status: MatchStatus.SCHEDULED,
+        leagueId: dto.leagueId,
+        homeTeamId: dto.homeTeamId,
+        awayTeamId: dto.awayTeamId,
+        matchDate: new Date(dto.scheduledAt),
+        status: dto.status || MatchStatus.SCHEDULED,
+        homeScore: dto.homeScore || 0,
+        awayScore: dto.awayScore || 0,
       },
     });
   }
@@ -85,25 +76,24 @@ export class MatchesService {
     if (!match) throw new NotFoundException('Match not found');
 
     const previousStatus = match.status;
-    const { scheduledAt, scheduled_at, status, homeScore, awayScore, home_score, away_score } = dto;
-    const isScoreUpdate = homeScore !== undefined || awayScore !== undefined || home_score !== undefined || away_score !== undefined || status === MatchStatus.COMPLETED;
+    const { scheduledAt, status, homeScore, awayScore} = dto;
+    const isScoreUpdate = homeScore !== undefined || awayScore !== undefined || status === MatchStatus.COMPLETED;
 
     if (previousStatus === MatchStatus.DRAFT && isScoreUpdate) {
       throw new Error('Cannot report score for a DRAFT match. Please start the season first.');
     }
 
     const updateData: any = {};
-    if (scheduledAt || scheduled_at) updateData.matchDate = new Date(scheduledAt || scheduled_at);
+    if (scheduledAt) updateData.matchDate = new Date(scheduledAt);
     if (status) updateData.status = status;
-    if (homeScore !== undefined || home_score !== undefined) updateData.homeScore = homeScore ?? home_score;
-    if (awayScore !== undefined || away_score !== undefined) updateData.awayScore = awayScore ?? away_score;
+    if (homeScore !== undefined ) updateData.homeScore = homeScore;
+    if (awayScore !== undefined ) updateData.awayScore = awayScore;
 
     const updatedMatch = await this.prisma.match.update({
       where: { id },
       data: updateData,
     });
 
-    // Sync Standings if status is completed or score changed
     if (updatedMatch.status === MatchStatus.COMPLETED || previousStatus === MatchStatus.COMPLETED) {
       await this.syncLeagueStandings(match, updatedMatch);
     }
@@ -112,8 +102,8 @@ export class MatchesService {
       type: 'update',
       match: {
         id: updatedMatch.id,
-        home_score: updatedMatch.homeScore,
-        away_score: updatedMatch.awayScore,
+        homeScore: updatedMatch.homeScore,
+        awayScore: updatedMatch.awayScore,
         status: updatedMatch.status,
       },
     }));
@@ -126,14 +116,13 @@ export class MatchesService {
     if (!match) throw new NotFoundException('Match not found');
 
     const type = dto.type || dto.eventType;
-    const teamId = dto.teamId || dto.team_id;
+    const teamId = dto.teamId
 
-<<<<<<< HEAD
     const event = await this.prisma.matchEvent.create({
       data: {
         matchId,
         teamId,
-        playerId: dto.playerId || dto.player_id || null,
+        playerId: dto.playerId || null,
         eventType: type,
         minute: dto.minute,
         commentary: dto.commentary,
@@ -147,7 +136,7 @@ export class MatchesService {
       if (type === EventType.GOAL) {
         if (teamId === match.homeTeamId) homeScoreInc = 1;
         if (teamId === match.awayTeamId) awayScoreInc = 1;
-      } else { // OWN_GOAL
+      } else { 
         if (teamId === match.homeTeamId) awayScoreInc = 1;
         if (teamId === match.awayTeamId) homeScoreInc = 1;
       }
@@ -164,65 +153,21 @@ export class MatchesService {
         type: 'goal',
         event,
         match: {
-          home_score: updatedMatch.homeScore,
-          away_score: updatedMatch.awayScore,
+          homeScore: updatedMatch.homeScore,
+          awayScore: updatedMatch.awayScore,
         },
       }));
     }
 
-    if (dto.playerId || dto.player_id) {
+    if (dto.playerId) {
       if ([EventType.GOAL, EventType.ASSIST, EventType.YELLOW_CARD, EventType.RED_CARD].includes(type)) {
-        await this.updatePlayerStats(match.leagueId, dto.playerId || dto.player_id, type);
+        await this.updatePlayerStats(match.leagueId, dto.playerId, type);
       }
-=======
-    if (this.isScoreEvent(dto.type)) {
-      await this.applyScoreEvent(match, dto);
-      await match.reload();
-      await this.publishGoalEvent(matchId, event, match.home_score, match.away_score);
-    }
-
-    if (dto.player_id && this.isPlayerStatEvent(dto.type)) {
-      await this.updatePlayerStats(match.league_id, dto.player_id, dto.type);
->>>>>>> cdd78b3140b024ca520fb8623c802b6614f08206
     }
 
     return event;
   }
 
-  private isScoreEvent(type: EventType): boolean {
-    return [EventType.GOAL, EventType.OWN_GOAL].includes(type);
-  }
-
-  private isPlayerStatEvent(type: EventType): boolean {
-    return [EventType.GOAL, EventType.ASSIST, EventType.YELLOW_CARD, EventType.RED_CARD].includes(type);
-  }
-
-  private async applyScoreEvent(match: Match, dto: MatchEventDto) {
-    const scoreField = this.getScoreField(dto, match);
-    if (!scoreField) return;
-    await match.increment(scoreField);
-  }
-
-  private getScoreField(dto: MatchEventDto, match: Match): 'home_score' | 'away_score' | null {
-    if (dto.type === EventType.GOAL) {
-      return dto.team_id === match.home_team_id ? 'home_score' : 'away_score';
-    }
-    if (dto.type === EventType.OWN_GOAL) {
-      return dto.team_id === match.home_team_id ? 'away_score' : 'home_score';
-    }
-    return null;
-  }
-
-  private async publishGoalEvent(matchId: string, event: any, home_score: number, away_score: number) {
-    await this.redis.publish(`match:${matchId}`, JSON.stringify({
-      type: 'goal',
-      event,
-      match: {
-        home_score,
-        away_score,
-      },
-    }));
-  }
 
   private async updatePlayerStats(leagueId: string, playerId: string, type: EventType) {
     const fieldMap: Partial<Record<EventType, string>> = {

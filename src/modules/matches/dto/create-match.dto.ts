@@ -1,4 +1,3 @@
-// src/modules/matches/dto/create-match.dto.ts
 import { IsUUID, IsDateString, IsEnum, IsOptional, IsInt, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MatchStatus } from '@prisma/client';
@@ -6,19 +5,19 @@ import { MatchStatus } from '@prisma/client';
 export class CreateMatchDto {
   @ApiProperty({ example: '223e4567-e89b-12d3-a456-426614174001', description: 'League UUID' })
   @IsUUID()
-  league_id: string;
+  leagueId: string;
 
   @ApiProperty({ example: '323e4567-e89b-12d3-a456-426614174002', description: 'Home Team UUID' })
   @IsUUID()
-  home_team_id: string;
+  homeTeamId: string;
 
   @ApiProperty({ example: '423e4567-e89b-12d3-a456-426614174003', description: 'Away Team UUID' })
   @IsUUID()
-  away_team_id: string;
+  awayTeamId: string;
 
   @ApiProperty({ example: '2025-10-10T20:00:00Z' })
   @IsDateString()
-  scheduled_at: string;
+  scheduledAt: string;
 
   @ApiPropertyOptional({ enum: MatchStatus, default: MatchStatus.SCHEDULED })
   @IsOptional()
@@ -29,11 +28,11 @@ export class CreateMatchDto {
   @IsOptional()
   @IsInt()
   @Min(0)
-  home_score?: number;
+  homeScore?: number;
 
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @IsInt()
   @Min(0)
-  away_score?: number;
+  awayScore?: number;
 }

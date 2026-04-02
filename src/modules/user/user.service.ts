@@ -1,4 +1,3 @@
-// src/modules/user/user.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -30,7 +29,6 @@ export class UserService {
     
     if (!user) throw new NotFoundException('User not found');
     
-    // exclude passwordHash and map playerProfile to player for frontend compatibility
     const { passwordHash, playerProfile, ...result } = user;
     return {
       ...result,

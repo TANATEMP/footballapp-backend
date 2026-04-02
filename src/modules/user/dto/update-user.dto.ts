@@ -1,4 +1,3 @@
-// src/modules/user/dto/update-user.dto.ts
 import { IsString, IsOptional, MaxLength, MinLength, Matches } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';

@@ -1,4 +1,3 @@
-// src/modules/auth/auth.controller.ts
 import { Controller, Post, Body, Req, HttpCode, HttpStatus, Get, UseGuards, Res } from '@nestjs/common';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
@@ -69,22 +68,12 @@ export class AuthController {
     return this.authService.logout(token, refreshToken);
   }
 
-  @Get('google')
+  @Post('google')
   @Public()
   @SkipThrottle()
-  @UseGuards(AuthGuard('google'))
-  googleAuth() {
-    // Passport Google OAuth redirect is handled by the guard,
-    // so this handler only exists as the route entrypoint.
-    return;
-  }
-
-  @Get('google/callback')
-  @Public()
-  @SkipThrottle()
-  @UseGuards(AuthGuard('google'))
-  async googleCallback(@Req() req: any, @Res() res: Response) {
-    const tokens = await this.authService.validateOAuthUser(req.user);
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${tokens.accessToken}`);
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login with Google Auth Token from React' })
+  async googleLogin(@Body() body: { accessToken: string; role?: string }) {
+    return this.authService.verifyGoogleAccessToken(body.accessToken, body.role);
   }
 }

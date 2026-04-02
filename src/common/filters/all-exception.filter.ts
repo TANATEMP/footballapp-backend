@@ -1,4 +1,3 @@
-// src/common/filters/all-exception.filter.ts
 import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus, Logger } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 

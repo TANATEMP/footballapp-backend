@@ -1,4 +1,3 @@
-// src/modules/user/users.controller.ts
 import { Controller, Get, Patch, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { UserService } from './user.service';

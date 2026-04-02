@@ -1,4 +1,3 @@
-// src/modules/matches/matches.controller.ts
 import { Controller, Get, Post, Body, Patch, Param, Query, ParseUUIDPipe, Sse, MessageEvent, Header } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { Observable } from 'rxjs';
@@ -62,8 +61,8 @@ export class MatchesController {
   @ApiOperation({ summary: 'Report match result (scores) and auto-update standings' })
   reportScore(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateMatchScoreDto) {
     return this.matchesService.update(id, {
-      home_score: dto.homeScore,
-      away_score: dto.awayScore,
+      homeScore: dto.homeScore,
+      awayScore: dto.awayScore,
       status: dto.status || 'COMPLETED',
     });
   }

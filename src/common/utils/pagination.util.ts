@@ -1,4 +1,3 @@
-// src/common/utils/pagination.util.ts
 import { PaginationDto } from '../dto/pagination.dto';
 
 export interface PaginatedResult<T> {

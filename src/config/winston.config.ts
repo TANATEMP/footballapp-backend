@@ -1,4 +1,3 @@
-// src/config/winston.config.ts
 import { WinstonModuleOptions } from 'nest-winston';
 import * as winston from 'winston';
 
@@ -8,7 +7,6 @@ export const winstonConfig: WinstonModuleOptions = {
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.errors({ stack: true }),
-        // Redact sensitive fields ก่อน log
         winston.format((info) => {
           const sensitiveKeys = [
             'password', 'password_hash', 'authorization',

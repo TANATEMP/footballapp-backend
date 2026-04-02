@@ -1,4 +1,3 @@
-// src/modules/mail/mail.service.ts
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
@@ -46,7 +45,6 @@ export class MailService {
       console.log(`Reset email sent to: ${email}`);
     } catch (error) {
       console.error('Error sending email:', error);
-      // In production, we might want to throw a custom exception
     }
   }
 }

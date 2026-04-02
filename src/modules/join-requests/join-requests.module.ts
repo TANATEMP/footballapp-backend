@@ -1,4 +1,3 @@
-// src/modules/join-requests/join-requests.module.ts
 import { Module } from '@nestjs/common';
 import { JoinRequestsService } from './join-requests.service';
 import { JoinRequestsController } from './join-requests.controller';

@@ -1,4 +1,3 @@
-// src/common/utils/crypto.util.ts
 import argon2 from 'argon2';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 

@@ -1,4 +1,3 @@
-// src/modules/leagues/leagues.controller.ts
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { LeaguesService } from './leagues.service';
@@ -32,7 +31,7 @@ export class LeaguesController {
   @ApiOperation({ summary: 'List all leagues', description: 'Public endpoint' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'status', required: false, enum: UserRole }) // Swagger can't see the internal enum directly here easily, but let's keep it consistent
+  @ApiQuery({ name: 'status', required: false, enum: UserRole })
   findAll(@Query() query: LeagueQueryDto) {
     return this.leaguesService.findAll(query);
   }

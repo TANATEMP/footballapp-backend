@@ -1,4 +1,3 @@
-// src/main.ts
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, ClassSerializerInterceptor, VersioningType } from '@nestjs/common';
@@ -154,12 +153,12 @@ async function bootstrap() {
       customSiteTitle: 'Football API Docs',
     });
 
-    console.log(`📚 Swagger UI: http://localhost:${config.get('PORT') || 3000}/api/docs`);
+    console.log(`Swagger UI: http://localhost:${config.get('PORT') || 3000}/api/docs`);
   }
 
   const port = config.get<number>('PORT') || 3000;
   await app.listen(port);
-  console.log(`🚀 Server running on http://localhost:${port}`);
+  console.log(`Server running on http://localhost:${port}`);
 }
 
 bootstrap();

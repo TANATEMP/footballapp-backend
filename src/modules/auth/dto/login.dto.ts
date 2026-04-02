@@ -1,4 +1,3 @@
-// src/modules/auth/dto/login.dto.ts
 import { IsEmail, IsString, MinLength, MaxLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
