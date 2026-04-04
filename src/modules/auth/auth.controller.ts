@@ -1,6 +1,21 @@
-import { Controller, Post, Body, Req, HttpCode, HttpStatus, Get, UseGuards, Res } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Req,
+  Res,
+  HttpCode,
+  HttpStatus,
+  Get,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -9,20 +24,48 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import type { Request, Response } from 'express';
-import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Auth')
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  private setAuthCookies(
+    res: Response,
+    tokens: { accessToken: string; refreshToken: string },
+  ) {
+    res.cookie('accessToken', tokens.accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+  }
+
+  private clearAuthCookies(res: Response) {
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+  }
+
   @Post('register')
   @Public()
   @Throttle({ default: { ttl: 3600000, limit: 3 } })
-  @ApiOperation({ summary: 'Register new account', description: 'Rate limited: 3 per hour per IP' })
-  @ApiResponse({ status: 201, description: 'User created successfully', type: AuthResponseDto })
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  @ApiOperation({ summary: 'Register new account' })
+  @ApiResponse({ status: 201, type: AuthResponseDto })
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.register(dto);
+    this.setAuthCookies(res, result.data);
+    return result;
   }
 
   @Post('login')
@@ -31,8 +74,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email/password' })
   @ApiResponse({ status: 200, type: AuthResponseDto })
-  async login(@Body() dto: LoginDto, @Req() req: Request) {
-    return this.authService.login(dto, req.ip || '');
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.login(dto, req.ip || '');
+    this.setAuthCookies(res, result.data);
+    return result;
   }
 
   @Post('forgot-password')
@@ -55,25 +104,48 @@ export class AuthController {
   @Throttle({ default: { ttl: 900000, limit: 10 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
-  async refresh(@Body('refreshToken') refreshToken: string) {
-    return this.authService.refreshToken(refreshToken);
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies?.refreshToken;
+    if (!refreshToken) {
+      throw new Error('Refresh token not found');
+    }
+
+    const result = await this.authService.refreshToken(refreshToken);
+    this.setAuthCookies(res, result.data);
+    return result;
   }
 
   @Post('logout')
-  @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Logout and revoke tokens' })
-  async logout(@Req() req: any, @Body('refreshToken') refreshToken: string) {
-    const token = req.headers.authorization?.split(' ')[1];
-    return this.authService.logout(token, refreshToken);
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const accessToken = req.cookies?.accessToken;
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (accessToken || refreshToken) {
+      await this.authService.logout(accessToken, refreshToken);
+    }
+    this.clearAuthCookies(res);
+    return { message: 'Logged out successfully' };
   }
 
   @Post('google')
   @Public()
   @SkipThrottle()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login with Google Auth Token from React' })
-  async googleLogin(@Body() body: { accessToken: string; role?: string }) {
-    return this.authService.verifyGoogleAccessToken(body.accessToken, body.role);
+  @ApiOperation({ summary: 'Login with Google' })
+  async googleLogin(
+    @Body() body: { accessToken: string; role?: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.verifyGoogleAccessToken(
+      body.accessToken,
+      body.role,
+    );
+    this.setAuthCookies(res, result.data);
+    return result;
   }
 }

@@ -225,7 +225,6 @@ export class LeaguesService {
       where: { leagueId: id, status: { in: [MatchStatus.DRAFT, MatchStatus.SCHEDULED] } },
     });
 
-    // --- Smart Scheduling Parameters (Prefer stored defaults, fallback to DTO) ---
     const allowedDays = dto.daysOfWeek?.length ? dto.daysOfWeek : (league.daysOfWeek?.length ? league.daysOfWeek : [6, 0]);
     const startTimeStr = dto.startTime || league.startTime || '18:00';
     const endTimeStr = dto.endTime || league.endTime || '22:00';
@@ -240,18 +239,15 @@ export class LeaguesService {
     if (teamIds.length % 2 !== 0) teamIds.push('BYE');
 
     let numRounds = teamIds.length - 1;
-    if (format === 'DOUBLE') numRounds *= 2; // Support Double Round-Robin
+    if (format === 'DOUBLE') numRounds *= 2;
 
     const matchesPerRound = teamIds.length / 2;
     const matchesToCreate: any[] = [];
-    const allowOverlap = true; // Always allow overlap for now as per previous requirement
+    const allowOverlap = true; 
 
     let roundStartDate = new Date(league.startDate);
-    // Adjust for Thai Timezone (GMT+7) when setting hours from user input
-    // 18:00 Local (Thai) = 11:00 UTC
     roundStartDate.setUTCHours(startH - 7, startM, 0, 0);
 
-    // Initial jump to first allowed day
     while (!allowedDays.includes(roundStartDate.getDay())) {
       roundStartDate.setDate(roundStartDate.getDate() + 1);
     }
@@ -259,7 +255,6 @@ export class LeaguesService {
     for (let round = 0; round < numRounds; round++) {
       let currentMatchTime = new Date(roundStartDate);
       const dayEnd = new Date(roundStartDate);
-      // Adjust for Thai Timezone (GMT+7) when setting end hours
       dayEnd.setUTCHours(endH - 7, endM, 0, 0);
 
       for (let match = 0; match < matchesPerRound; match++) {
@@ -267,9 +262,7 @@ export class LeaguesService {
         const awayId = teamIds[teamIds.length - 1 - match];
 
         if (homeId !== 'BYE' && awayId !== 'BYE') {
-          // Check if this match fits sequentially
           if (currentMatchTime.getTime() + durationMs > dayEnd.getTime() + 60000) {
-            // Default: Start at the beginning of the same day (Overlap)
             currentMatchTime = new Date(roundStartDate);
           }
 
