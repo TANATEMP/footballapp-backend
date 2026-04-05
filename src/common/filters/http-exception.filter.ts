@@ -25,14 +25,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message: exception.message,
     });
 
+    const exceptionResponseObj = typeof exceptionResponse === 'object' ? (exceptionResponse as any) : { message: exception.message };
+
     const errorBody = {
       success: false,
       error: {
         statusCode: status,
         code: this.getErrorCode(status),
-        message: typeof exceptionResponse === 'object'
-          ? (exceptionResponse as any).message
-          : exception.message,
+        ...exceptionResponseObj,
         ...(isDev && typeof exceptionResponse === 'object'
           ? { details: exceptionResponse }
           : {}),

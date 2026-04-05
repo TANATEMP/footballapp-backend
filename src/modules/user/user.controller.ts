@@ -5,6 +5,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @ApiTags('User')
 @ApiBearerAuth('JWT-auth')
@@ -24,6 +25,13 @@ export class UserController {
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   updateProfile(@CurrentUser('sub') userId: string, @Body() dto: UpdateUserDto) {
     return this.userService.updateProfile(userId, dto);
+  }
+
+  @Patch('password')
+  @ApiOperation({ summary: 'Change current user password' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
+  changePassword(@CurrentUser('sub') userId: string, @Body() dto: ChangePasswordDto) {
+    return this.userService.changePassword(userId, dto);
   }
 
   @Get('list')

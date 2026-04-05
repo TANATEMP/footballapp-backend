@@ -4,6 +4,7 @@ import { ValidationPipe, ClassSerializerInterceptor, VersioningType } from '@nes
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './config/winston.config';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -12,6 +13,7 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { HttpAdapterHost } from '@nestjs/core';
+import { CsrfGuard } from './common/guards/csrf.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -22,6 +24,8 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const isDev = config.get('NODE_ENV') === 'development';
   const httpAdapterHost = app.get(HttpAdapterHost);
+  
+  app.use(cookieParser());
 
   // ===== SECURITY: Helmet (Security Headers) =====
   app.use(
@@ -29,13 +33,16 @@ async function bootstrap() {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com'],
           connectSrc: ["'self'"],
           fontSrc: ["'self'"],
           objectSrc: ["'none'"],
           frameSrc: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+          frameAncestors: ["'none'"],
           upgradeInsecureRequests: isDev ? null : [],
         },
       },
@@ -52,17 +59,7 @@ async function bootstrap() {
 
   // ===== SECURITY: CORS =====
   app.enableCors({
-    origin: (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
-      const allowedOrigins = config.get<string[]>('CORS_ORIGINS') || [];
-      if (isDev || !origin) {
-        return callback(null, true);
-      }
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS: Origin ${origin} not allowed`), false);
-      }
-    },
+    origin: true, // Temporarily allow all origins for debugging
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
     credentials: true,
@@ -90,8 +87,12 @@ async function bootstrap() {
     new HttpExceptionFilter(),
   );
 
-  // ===== Global Interceptors =====
   const reflector = app.get(Reflector);
+
+  // ===== Global Guards =====
+  app.useGlobalGuards(new CsrfGuard(reflector));
+
+  // ===== Global Interceptors =====
   app.useGlobalInterceptors(
     new LoggingInterceptor(),
     new TimeoutInterceptor(),

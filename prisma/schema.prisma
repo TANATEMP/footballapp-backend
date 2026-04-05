@@ -36,6 +36,8 @@ model User {
   isActive     Boolean        @default(true)
   resetToken   String?        @db.Text
   resetTokenExpires DateTime?
+  twoFactorSecret   String?        @db.Text
+  isTwoFactorEnabled Boolean       @default(false)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 

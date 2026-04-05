@@ -26,7 +26,7 @@ export class RegisterDto {
     maxLength: 128,
   })
   @IsString()
-  @MinLength(12, { message: 'Password must be at least 12 characters' })
+  @MinLength(15, { message: 'Password must be at least 15 characters' })
   @MaxLength(128)
   @Matches(
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#+-_])[A-Za-z\d@$!%*?&#+-_]/,

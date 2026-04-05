@@ -9,6 +9,9 @@ import { User, UserRole } from '@prisma/client';
 import { hashPassword, verifyPassword, generateSecureToken } from '../../common/utils/crypto.util';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { BreachService } from '../../common/services/breach.service';
+import * as speakeasy from 'speakeasy';
+import { toDataURL } from 'qrcode';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +20,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private mailService: MailService,
+    private breachService: BreachService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -55,6 +59,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired reset token');
     }
 
+    if (await this.breachService.isPasswordPwned(password)) {
+      throw new ConflictException('This password has been compromised in a data breach. Please choose a different one.');
+    }
+
     const passwordHash = await hashPassword(password);
 
     await this.prisma.user.update({
@@ -81,6 +89,10 @@ export class AuthService {
     };
     const assignedRole = roleMap[dto.role || 'player'] || UserRole.PLAYER;
 
+    if (await this.breachService.isPasswordPwned(dto.password)) {
+      throw new ConflictException('This password has been compromised in a data breach. Please choose a different one.');
+    }
+
     const passwordHash = await hashPassword(dto.password);
     const user = await this.prisma.user.create({
       data: {
@@ -106,6 +118,20 @@ export class AuthService {
     if (!user || !passwordValid || !user.isActive) {
       await this.recordFailedLogin(dto.email, ip);
       throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (user.isTwoFactorEnabled) {
+      if (!dto.twoFactorCode) {
+        throw new ForbiddenException({ requires2FA: true, message: 'Two-factor authentication required' });
+      }
+      const isCodeValid = speakeasy.totp.verify({
+        secret: user.twoFactorSecret!,
+        encoding: 'base32',
+        token: dto.twoFactorCode,
+      });
+      if (!isCodeValid) {
+        throw new UnauthorizedException('Invalid two-factor authentication code');
+      }
     }
 
     await this.cacheManager.del(`login_attempts:${dto.email}`);
@@ -238,7 +264,18 @@ export class AuthService {
     const refreshTtl = 7 * 24 * 60 * 60 * 1000;
     await this.cacheManager.set(`refresh:${refreshToken}`, user.id, refreshTtl);
 
-    return { accessToken, refreshToken, tokenType: 'Bearer', expiresIn: 900 };
+    return { 
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role
+      },
+      accessToken, 
+      refreshToken, 
+      tokenType: 'Bearer', 
+      expiresIn: 900 
+    };
   }
 
   private async checkAccountLockout(email: string, ip: string) {
@@ -262,5 +299,45 @@ export class AuthService {
 
     if (emailAttempts >= 5) await this.cacheManager.set(`account_locked:${email}`, '1', lockTtl);
     if (ipAttempts >= 20) await this.cacheManager.set(`ip_locked:${ip}`, '1', lockTtl);
+  }
+
+  async generateTwoFactorSecret(userId: string, email: string) {
+    const secret = speakeasy.generateSecret({
+      name: `FootballApp (${email})`,
+    });
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { twoFactorSecret: secret.base32 },
+    });
+
+    return {
+      secret: secret.base32,
+      qrCodeUrl: await toDataURL(secret.otpauth_url!),
+    };
+  }
+
+  async turnOnTwoFactorAuthentication(userId: string, code: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.twoFactorSecret) {
+      throw new ConflictException('2FA secret is not generated');
+    }
+
+    const isCodeValid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: code,
+    });
+
+    if (!isCodeValid) {
+      throw new UnauthorizedException('Invalid two-factor authentication code');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { isTwoFactorEnabled: true },
+    });
+    
+    return { success: true };
   }
 }
