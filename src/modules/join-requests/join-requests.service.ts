@@ -11,7 +11,6 @@ export class JoinRequestsService {
   ) {}
 
   async create(userId: string, teamId: string, message?: string) {
-    // 1. Check if user already has an active player profile WITH A TEAM
     const existingPlayer = await this.prisma.player.findFirst({
       where: { userId },
     });
@@ -19,7 +18,6 @@ export class JoinRequestsService {
       throw new BadRequestException('You are already signed to a team. Cannot join another.');
     }
 
-    // 2. Check for duplicate pending requests
     const existingReq = await this.prisma.joinRequest.findUnique({
       where: {
         userId_teamId_status: {
