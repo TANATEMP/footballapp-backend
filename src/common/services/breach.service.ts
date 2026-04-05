@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 
 @Injectable()
@@ -12,7 +12,7 @@ export class BreachService {
       const suffix = hash.slice(5);
 
       const response = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
-      
+
       if (!response.ok) {
         this.logger.error(`HIBP API returned ${response.status}`);
         return false; // Fail safe
@@ -24,7 +24,7 @@ export class BreachService {
       for (const line of lines) {
         const [h, count] = line.split(':');
         if (h.trim() === suffix) {
-          return parseInt(count.trim(), 10) > 0;
+          return Number.parseInt(count.trim(), 10) > 0;
         }
       }
 

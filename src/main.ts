@@ -16,7 +16,6 @@ import { AllExceptionsFilter } from './common/filters/all-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
-import { HttpAdapterHost } from '@nestjs/core';
 import { CsrfGuard } from './common/guards/csrf.guard';
 
 async function bootstrap() {
@@ -28,8 +27,6 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const isDev = config.get('NODE_ENV') === 'development';
   const httpAdapterHost = app.get(HttpAdapterHost);
-  
-  app.use(cookieParser());
 
   app.use(cookieParser());
 

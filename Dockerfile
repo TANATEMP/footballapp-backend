@@ -27,12 +27,12 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001 -G nodejs
+  adduser -S nestjs -u 1001 -G nodejs
 
-COPY --from=deps --chown=nestjs:nodejs /app/node_modules ./node_modules
-COPY --from=deps --chown=nestjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-COPY --chown=nestjs:nodejs package*.json ./
+COPY --from=deps --chown=nestjs:nodejs --chmod=555 /app/node_modules ./node_modules
+COPY --from=deps --chown=nestjs:nodejs --chmod=555 /app/prisma ./prisma
+COPY --from=builder --chown=nestjs:nodejs --chmod=555 /app/dist ./dist
+COPY --chown=nestjs:nodejs --chmod=444 package*.json ./
 
 USER nestjs
 

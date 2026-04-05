@@ -4,8 +4,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { GoogleStrategy } from './strategies/google.strategy';
 import { BreachService } from '../../common/services/breach.service';
+import { PassportModule } from '@nestjs/passport';
 
 @Module({
   imports: [
@@ -19,9 +19,10 @@ import { BreachService } from '../../common/services/breach.service';
       }),
       inject: [ConfigService],
     }),
+    PassportModule.register({ defaultStrategy: 'jwt' }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, BreachService],
+  providers: [AuthService, JwtStrategy, BreachService],
   exports: [AuthService, JwtStrategy, PassportModule, BreachService],
 })
 export class AuthModule {}

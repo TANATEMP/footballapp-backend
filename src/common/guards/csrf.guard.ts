@@ -5,7 +5,7 @@ import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator';
 
 @Injectable()
 export class CsrfGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private readonly reflector: Reflector) { }
 
   canActivate(context: ExecutionContext): boolean {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -18,7 +18,7 @@ export class CsrfGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<Request>();
-    
+
     // Allow safe methods
     if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
       return true;

@@ -205,7 +205,7 @@ export class MatchesService {
     if (!leagueId) return;
 
     const getStats = (m: Match | null) => {
-      if (!m || m.status !== MatchStatus.COMPLETED) return null;
+      if (m?.status !== MatchStatus.COMPLETED) return null;
       const hWin = m.homeScore > m.awayScore;
       const draw = m.homeScore === m.awayScore;
       const aWin = m.homeScore < m.awayScore;

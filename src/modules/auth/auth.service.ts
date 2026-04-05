@@ -16,6 +16,8 @@ import {
   hashPassword,
   verifyPassword,
   generateSecureToken,
+  encryptData,
+  decryptData,
 } from '../../common/utils/crypto.util';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -30,14 +32,14 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private mailService: MailService,
-    private breachService: BreachService,
+    private readonly breachService: BreachService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-  ) {}
+  ) { }
 
   async forgotPassword(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
 
-    if (!user || !user.isActive)
+    if (!user?.isActive)
       return {
         success: true,
         message: 'If the email exists, a reset link will be sent.',
@@ -126,11 +128,11 @@ export class AuthService {
     });
     const dummyHash = '$argon2id$v=19$m=65536,t=3,p=4$dummy';
     const passwordValid =
-      user && user.passwordHash
+      user?.passwordHash
         ? await verifyPassword(user.passwordHash, dto.password)
         : await verifyPassword(dummyHash, dto.password).catch(() => false);
 
-    if (!user || !passwordValid || !user.isActive) {
+    if (!user?.isActive || !passwordValid) {
       await this.recordFailedLogin(dto.email, ip);
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -139,8 +141,11 @@ export class AuthService {
       if (!dto.twoFactorCode) {
         throw new ForbiddenException({ requires2FA: true, message: 'Two-factor authentication required' });
       }
+      const encryptionKey = this.configService.get<string>('OAUTH_ENCRYPTION_KEY') || '0'.repeat(64);
+      const decryptedSecret = decryptData(user.twoFactorSecret!, encryptionKey);
+
       const isCodeValid = speakeasy.totp.verify({
-        secret: user.twoFactorSecret!,
+        secret: decryptedSecret,
         encoding: 'base32',
         token: dto.twoFactorCode,
       });
@@ -168,7 +173,7 @@ export class AuthService {
     }
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || !user.isActive) {
+    if (!user?.isActive) {
       throw new UnauthorizedException('User not found or deactivated');
     }
 
@@ -191,6 +196,7 @@ export class AuthService {
           }
         }
       } catch (error) {
+        console.log(error);
       }
     }
 
@@ -319,17 +325,17 @@ export class AuthService {
     const refreshTtl = 7 * 24 * 60 * 60 * 1000;
     await this.cacheManager.set(`refresh:${refreshToken}`, user.id, refreshTtl);
 
-    return { 
+    return {
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role
       },
-      accessToken, 
-      refreshToken, 
-      tokenType: 'Bearer', 
-      expiresIn: 900 
+      accessToken,
+      refreshToken,
+      tokenType: 'Bearer',
+      expiresIn: 900
     };
   }
 
@@ -370,9 +376,12 @@ export class AuthService {
       name: `FootballApp (${email})`,
     });
 
+    const encryptionKey = this.configService.get<string>('OAUTH_ENCRYPTION_KEY') || '0'.repeat(64);
+    const encryptedSecret = encryptData(secret.base32, encryptionKey);
+
     await this.prisma.user.update({
       where: { id: userId },
-      data: { twoFactorSecret: secret.base32 },
+      data: { twoFactorSecret: encryptedSecret },
     });
 
     return {
@@ -387,8 +396,11 @@ export class AuthService {
       throw new ConflictException('2FA secret is not generated');
     }
 
+    const encryptionKey = this.configService.get<string>('OAUTH_ENCRYPTION_KEY') || '0'.repeat(64);
+    const decryptedSecret = decryptData(user.twoFactorSecret, encryptionKey);
+
     const isCodeValid = speakeasy.totp.verify({
-      secret: user.twoFactorSecret,
+      secret: decryptedSecret,
       encoding: 'base32',
       token: code,
     });
@@ -401,7 +413,7 @@ export class AuthService {
       where: { id: userId },
       data: { isTwoFactorEnabled: true },
     });
-    
+
     return { success: true };
   }
 }

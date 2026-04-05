@@ -6,9 +6,9 @@ import {
   Res,
   HttpCode,
   HttpStatus,
-  Get,
   UseGuards,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import {
   ApiTags,
@@ -23,12 +23,13 @@ import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { generateSecureToken } from '../../common/utils/crypto.util';
 import type { Request, Response } from 'express';
 
 @ApiTags('Auth')
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   private setAuthCookies(
     res: Response,
@@ -79,7 +80,7 @@ export class AuthController {
 
   private setCookies(res: Response, accessToken: string, refreshToken: string) {
     const isProd = process.env.NODE_ENV === 'production';
-    
+
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: isProd,
@@ -95,8 +96,8 @@ export class AuthController {
     });
 
     // CSRF Token (Allow JS to read so it can send in X-XSRF-TOKEN header)
-    res.cookie('XSRF-TOKEN', Math.random().toString(36).substring(2, 15), {
-      httpOnly: false, 
+    res.cookie('XSRF-TOKEN', generateSecureToken(32), {
+      httpOnly: false,
       secure: isProd,
       sameSite: 'lax',
       maxAge: 15 * 60 * 1000,
@@ -136,12 +137,12 @@ export class AuthController {
   async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
     const accessToken = req.cookies['accessToken'] || req.headers.authorization?.split(' ')[1];
     const refreshToken = req.cookies['refreshToken'];
-    
+
     await this.authService.logout(accessToken, refreshToken);
-    
+
     res.clearCookie('accessToken');
     res.clearCookie('refreshToken');
-    
+
     return { success: true };
   }
 

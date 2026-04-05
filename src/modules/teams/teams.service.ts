@@ -157,7 +157,7 @@ async joinLeague(teamId: string, leagueId: string, user: any) {
       throw new BadRequestException('Team is not in any league.');
     }
 
-    if (team.league && team.league.status === LeagueStatus.ONGOING) {
+    if (team.league?.status === LeagueStatus.ONGOING) {
       throw new BadRequestException('Cannot remove team from an ongoing league.');
     }
 
